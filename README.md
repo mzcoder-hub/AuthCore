@@ -1,6 +1,6 @@
 # AuthCore Frontend 🎨
 
-A modern, responsive admin dashboard and user interface for [AuthCore Backend](https://github.com/mzcoder-hub/AuthCore) - a centralized authentication system. Built with Next.js 15, TypeScript, and Tailwind CSS to provide a seamless management experience for your AuthCore authentication server.
+A modern, responsive admin dashboard and user interface for [AuthCore Backend](https://github.com/mzcoder-hub/AuthCore/tree/master/backend) - a centralized authentication system. Built with Next.js 15, TypeScript, and Tailwind CSS to provide a seamless management experience for your AuthCore authentication server.
 
 ![AuthCore System](https://via.placeholder.com/800x400/1f2937/ffffff?text=AuthCore+Admin+Dashboard)
 
@@ -38,7 +38,7 @@ A modern, responsive admin dashboard and user interface for [AuthCore Backend](h
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-org/authcore-frontend.git
+   git clone https://github.com/mzcoder-hub/AuthCore.git
    cd authcore-frontend
    ```
 
@@ -76,7 +76,7 @@ A modern, responsive admin dashboard and user interface for [AuthCore Backend](h
 
 ## 🔗 Backend Integration
 
-This frontend is designed to work with the [AuthCore Backend](https://github.com/your-org/authcore). Ensure your backend is running and properly configured.
+This frontend is designed to work with the [AuthCore Backend](https://github.com/mzcoder-hub/AuthCore/tree/master/backend). Ensure your backend is running and properly configured.
 
 ### API Integration
 
@@ -261,7 +261,7 @@ We welcome contributions! Please ensure your changes work with the AuthCore back
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/mzcoder-hub/AuthCore.git`
 3. Install dependencies: `npm install`
-4. Start AuthCore backend (see [backend setup](https://github.com/mzcoder-hub/AuthCore))
+4. Start AuthCore backend (see [backend setup](https://github.com/mzcoder-hub/AuthCore/tree/master/backend))
 5. Start frontend: `npm run dev`
 6. Create feature branch: `git checkout -b feature/amazing-feature`
 7. Make changes and test with backend
@@ -308,6 +308,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
   <strong>Built with ❤️ for the AuthCore ecosystem</strong>
   <br>
   <a href="https://github.com/mzcoder-hub/AuthCore">AuthCore Repo</a> • 
+  <a href="https://github.com/mzcoder-hub/AuthCore/tree/master/backend">AuthCore Backend</a> • 
   <a href="#">Docs</a>
 </div>
 ```
