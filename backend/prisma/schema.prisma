@@ -1,0 +1,153 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // You can change this to sqlite, mysql, etc.
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  Active
+  Inactive
+  Locked
+  Pending
+}
+
+enum UserSource {
+  Local
+}
+
+enum ApplicationType {
+  Web
+  Mobile
+  SPA
+  Service
+}
+
+enum ApplicationStatus {
+  Active
+  Inactive
+  Development
+}
+
+// Models
+model User {
+  id                  String    @id @default(cuid())
+  name                String
+  email               String    @unique
+  password            String    // Hashed password
+  status              UserStatus @default(Active)
+  source              UserSource @default(Local)
+  roles               UserRole[]
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+  lastLogin           DateTime?
+  passwordLastChanged DateTime?
+  
+  // Relations
+  applications        UserApplication[]
+
+  AuthToken AuthToken[]
+}
+
+model Application {
+  id                  String    @id @default(cuid())
+  name                String
+  type                ApplicationType
+  clientId            String    @unique
+  clientSecret        String?
+  redirectUris        String[]  // Array of URIs
+  applicationUrls     String[]
+  status              ApplicationStatus @default(Active)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+  description         String?
+  accessTokenLifetime Int?      // in minutes
+  refreshTokenLifetime Int?     // in days
+  
+  // Relations
+  users               UserApplication[]
+}
+
+// Join table for many-to-many relationship between User and Application
+model UserApplication {
+  id            String      @id @default(cuid())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String
+  assignedAt    DateTime    @default(now())
+
+  @@unique([userId, applicationId])
+  @@index([userId])
+  @@index([applicationId])
+}
+
+// For audit logging
+model AuditLog {
+  id            String   @id @default(cuid())
+  event         String
+  userId        String?
+  applicationId String?
+  ipAddress     String?
+  userAgent     String?
+  details       Json?
+  createdAt     DateTime @default(now())
+}
+
+// For authentication tokens
+model AuthToken {
+  id            String   @id @default(cuid())
+  token         String   @unique
+  userId        String
+  user          User @relation(fields: [userId], references: [id])
+  applicationId String
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  revokedAt     DateTime?
+  type          String   // "access", "refresh", etc.
+}
+
+model Role {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String?
+  users       UserRole[]    // Many-to-many with User
+  permissions RolePermission[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt           DateTime?
+}
+
+model Permission {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  id           String      @id @default(cuid())
+  role         Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId       String
+  permission   Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  permissionId String
+
+  @@unique([roleId, permissionId])
+}
+
+model UserRole {
+  id     String  @id @default(cuid())
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  role   Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId String
+  assignedAt DateTime @default(now())
+  @@unique([userId, roleId])
+}

@@ -1,8 +1,8 @@
 # AuthCore Frontend 🎨
 
-A modern, responsive admin dashboard and user interface for [AuthCore Backend](https://github.com/your-org/authcore) - a centralized authentication system. Built with Next.js 15, TypeScript, and Tailwind CSS to provide a seamless management experience for your AuthCore authentication server.
+A modern, responsive admin dashboard and user interface for [AuthCore Backend](https://github.com/mzcoder-hub/AuthCore) - a centralized authentication system. Built with Next.js 15, TypeScript, and Tailwind CSS to provide a seamless management experience for your AuthCore authentication server.
 
-![AuthCore Dashboard](https://via.placeholder.com/800x400/1f2937/ffffff?text=AuthCore+Admin+Dashboard)
+![AuthCore System](https://via.placeholder.com/800x400/1f2937/ffffff?text=AuthCore+Admin+Dashboard)
 
 ## ✨ Features
 
@@ -259,9 +259,9 @@ We welcome contributions! Please ensure your changes work with the AuthCore back
 ### Development Setup
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/yourusername/authcore-frontend.git`
+2. Clone your fork: `git clone https://github.com/mzcoder-hub/AuthCore.git`
 3. Install dependencies: `npm install`
-4. Start AuthCore backend (see [backend setup](https://github.com/your-org/authcore))
+4. Start AuthCore backend (see [backend setup](https://github.com/mzcoder-hub/AuthCore))
 5. Start frontend: `npm run dev`
 6. Create feature branch: `git checkout -b feature/amazing-feature`
 7. Make changes and test with backend
@@ -282,15 +282,13 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🔗 Related Projects
 
-- **[AuthCore Backend](https://github.com/your-org/authcore)** - The authentication server
-- **[AuthCore SDK](https://github.com/your-org/authcore-sdk)** - Client libraries for integration
-- **[AuthCore Docs](https://github.com/your-org/authcore-docs)** - Documentation site
+- **[AuthCore Repo](https://github.com/mzcoder-hub/AuthCore)** - The authentication server
 
 ## 📞 Support
 
 - 📖 [Documentation](https://authcore-docs.example.com)
-- 🐛 [Frontend Issues](https://github.com/your-org/authcore-frontend/issues)
-- 🔧 [Backend Issues](https://github.com/your-org/authcore/issues)
+- 🐛 [Frontend Issues](https://github.com/mzcoder-hub/AuthCore/issues)
+- 🔧 [Backend Issues](https://github.com/mzcoder-hub/AuthCore/issues)
 - 💬 [Discord Community](https://discord.gg/authcore)
 
 ## 🗺️ Roadmap
@@ -309,9 +307,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 <div align="center">
   <strong>Built with ❤️ for the AuthCore ecosystem</strong>
   <br>
-  <a href="https://github.com/your-org/authcore">Backend</a> • 
-  <a href="https://github.com/your-org/authcore-frontend">Frontend</a> • 
-  <a href="https://github.com/your-org/authcore-docs">Docs</a>
+  <a href="https://github.com/mzcoder-hub/AuthCore">AuthCore Repo</a> • 
+  <a href="#">Docs</a>
 </div>
 ```
 
