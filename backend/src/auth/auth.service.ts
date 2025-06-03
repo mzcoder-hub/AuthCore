@@ -26,12 +26,24 @@ export class AuthService {
       },
     });
 
-    if (!user || !(await bcrypt.compare(dto.password, user.password))) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
     const app = await this.prisma.application.findUnique({
       where: { clientId: dto.client_id },
     });
+
+    if (!user || !(await bcrypt.compare(dto.password, user.password))) {
+      // Log failed login attempt
+      await this.prisma.auditLog.create({
+        data: {
+          event: 'login_failed',
+          userId: user?.id ?? null,
+          applicationId: app?.id ?? null,
+          ipAddress: null,
+          details: { method: 'password', success: false, email: dto.email },
+        },
+      });
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     if (!app) throw new UnauthorizedException('Invalid application');
 
     // 👉 Update lastLogin for the user

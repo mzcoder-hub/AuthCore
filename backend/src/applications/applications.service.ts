@@ -24,6 +24,7 @@ export class ApplicationService {
       ...(search && { name: { contains: search, mode: 'insensitive' } }),
       ...(status && { status: status as ApplicationStatus }),
       ...(type && { type: type as ApplicationType }),
+      deletedAt: null,
     };
 
     const [total, apps] = await Promise.all([
@@ -48,7 +49,9 @@ export class ApplicationService {
   }
 
   async findById(id: string) {
-    return this.prisma.application.findUnique({ where: { id } });
+    return this.prisma.application.findUnique({
+      where: { id, deletedAt: null },
+    });
   }
 
   async create(dto: CreateApplicationDto) {
@@ -66,7 +69,10 @@ export class ApplicationService {
   }
 
   async delete(id: string) {
-    await this.prisma.application.delete({ where: { id } });
+    await this.prisma.application.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
     return { success: true };
   }
 
