@@ -82,49 +82,14 @@ async function main() {
       type: ApplicationType.Web,
       clientId: 'authcore-dashboard',
       clientSecret: randomUUID(),
-      redirectUris: ['http://localhost:3000/auth/callback'],
-      applicationUrls: ['http://localhost:3001'],
+      redirectUris: ['http://localhost:2323/auth/callback'],
+      applicationUrls: ['http://localhost:2323'],
       status: ApplicationStatus.Active,
       description: 'The admin dashboard for managing AuthCore',
       accessTokenLifetime: 60,
       refreshTokenLifetime: 7,
     },
   });
-
-  const app1 = await prisma.application.upsert({
-    where: { clientId: 'demo-web-client' },
-    update: {},
-    create: {
-      name: 'Demo Web App',
-      type: ApplicationType.Web,
-      clientId: 'demo-web-client',
-      clientSecret: randomUUID(),
-      redirectUris: ['http://localhost:3001/auth/callback'],
-      applicationUrls: ['http://localhost:3001'],
-      status: ApplicationStatus.Active,
-      description: 'A demo web frontend',
-      accessTokenLifetime: 15,
-      refreshTokenLifetime: 7,
-    },
-  });
-
-  const app2 = await prisma.application.upsert({
-    where: { clientId: 'demo-mobile-client' },
-    update: {},
-    create: {
-      name: 'Demo Mobile App',
-      type: ApplicationType.Mobile,
-      clientId: 'demo-mobile-client',
-      clientSecret: randomUUID(),
-      redirectUris: ['myapp://auth/callback'],
-      applicationUrls: ['myapp://auth'],
-      status: ApplicationStatus.Development,
-      description: 'A demo mobile app',
-      accessTokenLifetime: 30,
-      refreshTokenLifetime: 14,
-    },
-  });
-
   // ======== 5. Users ==========
   // SUPERADMIN USER
   const superadminUser = await prisma.user.upsert({
@@ -168,8 +133,8 @@ async function main() {
   // ======== 6. Assign users to applications ==========
   for (const [user, apps] of [
     [superadminUser, [dashboardApp]],
-    [adminUser, [dashboardApp, app1, app2]],
-    [demoUser, [app1, app2]],
+    [adminUser, [dashboardApp]],
+    [demoUser, [dashboardApp]],
   ] as const) {
     for (const app of apps) {
       await prisma.userApplication.upsert({

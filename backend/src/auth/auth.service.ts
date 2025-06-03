@@ -16,7 +16,14 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      include: { roles: true, applications: true },
+      include: {
+        roles: {
+          include: {
+            role: true,
+          },
+        },
+        applications: true,
+      },
     });
 
     if (!user || !(await bcrypt.compare(dto.password, user.password))) {

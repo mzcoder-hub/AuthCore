@@ -28,13 +28,6 @@ export class UserService {
         ],
       }),
       ...(status && { status: status as UserStatus }),
-      ...(role && {
-        userRoles: {
-          some: {
-            role: { name: { equals: role } },
-          },
-        },
-      }),
     };
 
     const [total, users] = await Promise.all([
@@ -81,6 +74,7 @@ export class UserService {
       where: { id },
       include: {
         applications: { include: { application: true } },
+        roles: { include: { role: true } },
       },
     });
     if (!user) throw new NotFoundException();

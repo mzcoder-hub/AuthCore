@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   title: "AuthCore - Centralized Authentication System",
   description:
     "A centralized authentication system similar to Keycloak or FusionAuth",
-  generator: "v0.dev",
 };
 
 export default function RootLayout({

@@ -1,8 +1,10 @@
+import { getToken } from "./authCore";
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const fetchWithAuth = async (endpoint: string, method = 'GET', body?: any) => {
-  const token = localStorage.getItem('token');
-
+  const token = getToken()
+  console.log(token);
   const res = await fetch(`${API_URL}/${endpoint}`, {
     method,
     headers: {

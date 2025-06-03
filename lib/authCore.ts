@@ -1,13 +1,43 @@
 // lib/authCore.ts
-import * as jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode"
 
 export type LoginPayload = {
-  email: string;
-  password: string;
-  client_id: string;
-  redirect_uri: string;
-  state?: string; // optional
-};
+  email: string
+  password: string
+  client_id: string
+  redirect_uri: string
+  state?: string // optional
+}
+
+
+// Role type based on your actual structure
+export type Role = {
+  id: string
+  name: string
+  description: string
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+}
+
+// Role assignment type
+export type RoleAssignment = {
+  id: string
+  userId: string
+  roleId: string
+  assignedAt: string
+  role: Role
+}
+
+// JWT PAYLOAD TYPE (updated to match your actual structure)
+export type JwtPayload = {
+  sub: string
+  email: string
+  roles: RoleAssignment[]
+  applicationId?: string
+  exp?: number
+  iat?: number
+}
 
 // LOGIN
 export async function login({
@@ -17,87 +47,90 @@ export async function login({
   redirect_uri,
   state,
 }: {
-  email: string;
-  password: string;
-  client_id: string;
-  redirect_uri: string;
-  state?: string;
+  email: string
+  password: string
+  client_id: string
+  redirect_uri: string
+  state?: string
 }) {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_AUTHCORE_BASE_URL || "http://localhost:3000/api"}/auth/login`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        password,
-        client_id,
-        redirect_uri,
-        state,
-      }),
-    }
-  );
+  const res = await fetch(`${process.env.NEXT_PUBLIC_AUTHCORE_BASE_URL || "http://localhost:3000/api"}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email,
+      password,
+      client_id,
+      redirect_uri,
+      state,
+    }),
+  })
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || "Login failed");
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || "Login failed")
   }
 
-  const data = await res.json();
+  const data = await res.json()
 
   // Save tokens to localStorage
   if (typeof window !== "undefined") {
-    if (data.accessToken) localStorage.setItem("accessToken", data.accessToken);
-    if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken);
+    if (data.accessToken) localStorage.setItem("accessToken", data.accessToken)
+    if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken)
   }
 
-  return data;
+  return data
 }
 
 // LOGOUT
 export function logout() {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("accessToken")
+    localStorage.removeItem("refreshToken")
   }
 }
 
 // TOKEN HELPERS
 export function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("accessToken");
+  if (typeof window === "undefined") return null
+  return localStorage.getItem("accessToken")
 }
 
 export function getRefreshToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("refreshToken");
+  if (typeof window === "undefined") return null
+  return localStorage.getItem("refreshToken")
 }
 
 export function clearTokens() {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("accessToken")
+    localStorage.removeItem("refreshToken")
   }
 }
 
-// JWT PAYLOAD TYPE (customize fields as needed)
-export type JwtPayload = {
-  sub: string;
-  email: string;
-  roles: any[]; // Change to your Role shape
-  applicationId?: string;
-  exp?: number;
-  iat?: number;
-};
-
 // JWT DECODE
 export function getUserFromToken(token?: string): JwtPayload | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined") return null
   try {
-    const t = token || getToken();
-    if (!t) return null;
-    return jwtDecode<JwtPayload>(t);
+    const t = token || getToken()
+    if (!t) return null
+
+    const decoded = jwtDecode<JwtPayload>(t)
+
+    return decoded
   } catch (err) {
-    return null;
+    console.error("JWT decode error:", err)
+    return null
   }
+}
+
+// Helper function to check if user has a specific role
+export function hasRole(user: JwtPayload | null, roleName: string): boolean {
+  if (!user?.roles?.length) return false
+  return user.roles.some((roleAssignment) => roleAssignment.role.name === roleName)
+}
+
+// Helper function to get all role names
+export function getUserRoles(user: JwtPayload | null): string[] {
+  if (!user?.roles?.length) return []
+  return user.roles.map((roleAssignment) => roleAssignment.role.name)
 }
