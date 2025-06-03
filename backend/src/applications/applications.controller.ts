@@ -59,6 +59,11 @@ export class ApplicationController {
     return this.applicationService.create(dto);
   }
 
+  @Post(':id/rotate-secret')
+  async rotateSecret(@Param('id') id: string) {
+    return this.applicationService.rotateClientSecret(id);
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   update(@Param('id') id: string, @Body() dto: UpdateApplicationDto) {

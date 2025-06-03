@@ -84,4 +84,22 @@ export class ApplicationService {
       assignedAt: ua.assignedAt,
     }));
   }
+
+  async rotateClientSecret(applicationId: string) {
+    const app = await this.prisma.application.findUnique({
+      where: { id: applicationId },
+    });
+    if (!app) throw new NotFoundException('Application not found');
+
+    const newSecret = randomUUID();
+    const updated = await this.prisma.application.update({
+      where: { id: applicationId },
+      data: { clientSecret: newSecret },
+    });
+
+    return {
+      clientId: updated.clientId,
+      clientSecret: newSecret,
+    };
+  }
 }
