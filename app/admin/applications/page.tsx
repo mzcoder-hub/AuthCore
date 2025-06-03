@@ -1,12 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
-import { Check, Copy, Eye, EyeOff, MoreHorizontal, Plus, Search, Users } from "lucide-react"
+import { Check, Copy, Eye, EyeOff, MoreHorizontal, Plus, Search } from "lucide-react"
 
-import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
-import { fetchApplications, deleteApplication, rotateClientSecret } from "@/lib/redux/slices/applicationsSlice"
-import { fetchUsers } from "@/lib/redux/slices/usersSlice"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,30 +27,87 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useToast } from "@/hooks/use-toast" // Assuming you have useToast
+import { fetchWithAuth } from "@/lib/api"
+
+// Define types based on your API response
+type Application = {
+  id: string
+  name: string
+  type: "Web" | "Mobile" | "SPA" | "Service"
+  clientId: string
+  clientSecret?: string
+  redirectUris: string[]
+  status: "Active" | "Inactive" | "Development"
+  createdAt: string
+  description?: string
+  accessTokenLifetime?: number // in minutes
+  refreshTokenLifetime?: number // in days
+  allowedUsers?: string[] // IDs of users allowed to access this application
+}
+
+type ApiResponse = {
+  meta: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  items: Application[]
+}
 
 export default function ApplicationsPage() {
-  const dispatch = useAppDispatch()
-  const { applications, loading } = useAppSelector((state) => state.applications)
-  const { users } = useAppSelector((state) => state.users)
-
+  const { toast } = useToast() // Initialize toast
+  const [applications, setApplications] = useState<Application[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [copiedSecret, setCopiedSecret] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("all")
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
-  const [selectedApp, setSelectedApp] = useState<string | null>(null)
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null) // Store full app object
   const [isSecretDialogOpen, setIsSecretDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
+  // Pagination state
+  const [meta, setMeta] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+  })
+
+  const fetchApplications = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams({
+        page: meta.page.toString(),
+        limit: meta.limit.toString(),
+        search: searchQuery,
+        status: activeTab === "all" ? "" : activeTab, // Use activeTab for status filter
+        type: activeTab === "all" ? "" : activeTab, // Use activeTab for type filter (if applicable)
+      })
+
+      const data: ApiResponse = await fetchWithAuth(`applications?${params}`) // Updated call
+      setApplications(data.items)
+      setMeta(data.meta)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch applications")
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to load applications.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [meta.page, meta.limit, searchQuery, activeTab, toast])
 
   useEffect(() => {
-    dispatch(fetchApplications())
-    dispatch(fetchUsers())
-  }, [dispatch])
-
-  const filteredApplications = applications.filter((app) => {
-    const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesType = activeTab === "all" || app.type.toLowerCase() === activeTab.toLowerCase()
-    return matchesSearch && matchesType
-  })
+    fetchApplications()
+  }, [fetchApplications])
 
   const copyToClipboard = (text: string, id: string, isSecret = false) => {
     navigator.clipboard.writeText(text)
@@ -64,11 +118,31 @@ export default function ApplicationsPage() {
       setCopiedId(id)
       setTimeout(() => setCopiedId(null), 2000)
     }
+    toast({
+      title: "Copied!",
+      description: isSecret ? "Client secret copied to clipboard." : "Client ID copied to clipboard.",
+      duration: 1500,
+    })
   }
 
-  const handleDeleteApplication = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this application?")) {
-      dispatch(deleteApplication(id))
+  const handleDeleteApplication = async () => {
+    if (!selectedApp) return
+
+    try {
+      await fetchWithAuth(`applications/${selectedApp.id}`, "DELETE") // Updated call
+      toast({
+        title: "Success",
+        description: "Application deleted successfully.",
+      })
+      setIsDeleteDialogOpen(false)
+      setSelectedApp(null)
+      fetchApplications() // Refresh the list
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to delete application.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -79,16 +153,29 @@ export default function ApplicationsPage() {
     }))
   }
 
-  const handleRotateClientSecret = () => {
-    if (selectedApp) {
-      dispatch(rotateClientSecret(selectedApp))
+  const handleRotateClientSecret = async () => {
+    if (!selectedApp) return
+
+    try {
+      await fetchWithAuth(`applications/${selectedApp.id}/rotate-secret`, "POST") // Updated call
+      toast({
+        title: "Success",
+        description: "Client secret has been rotated. Make sure to update your application with the new secret.",
+      })
       setIsSecretDialogOpen(false)
-      alert("Client secret has been rotated. Make sure to update your application with the new secret.")
+      setSelectedApp(null)
+      fetchApplications() // Refresh to get the new secret
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to rotate client secret.",
+        variant: "destructive",
+      })
     }
   }
 
-  const getApplicationUsers = (appId: string) => {
-    return users.filter((user) => user.applications.includes(appId))
+  const handlePageChange = (newPage: number) => {
+    setMeta((prev) => ({ ...prev, page: newPage }))
   }
 
   return (
@@ -109,7 +196,9 @@ export default function ApplicationsPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Registered Applications</CardTitle>
-          <CardDescription>Applications that can authenticate users through your service</CardDescription>
+          <CardDescription>
+            Applications that can authenticate users through your service ({meta.total} total)
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 pb-4">
@@ -133,6 +222,10 @@ export default function ApplicationsPage() {
             </Tabs>
           </div>
 
+          {error && (
+            <div className="mb-4 rounded-md bg-destructive/15 p-3 text-sm text-destructive">Error: {error}</div>
+          )}
+
           <div className="rounded-md border overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -142,13 +235,12 @@ export default function ApplicationsPage() {
                     <TableHead className="hidden md:table-cell">Type</TableHead>
                     <TableHead>Client ID</TableHead>
                     <TableHead className="hidden lg:table-cell">Status</TableHead>
-                    <TableHead className="hidden md:table-cell">Users</TableHead>
                     <TableHead className="w-[80px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading === "pending" ? (
-                    Array.from({ length: 5 }).map((_, index) => (
+                  {loading ? (
+                    Array.from({ length: meta.limit }).map((_, index) => (
                       <TableRow key={index}>
                         <TableCell>
                           <div className="space-y-1">
@@ -165,16 +257,13 @@ export default function ApplicationsPage() {
                         <TableCell className="hidden lg:table-cell">
                           <Skeleton className="h-5 w-16" />
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <Skeleton className="h-4 w-20" />
-                        </TableCell>
                         <TableCell>
                           <Skeleton className="h-8 w-8 rounded-md" />
                         </TableCell>
                       </TableRow>
                     ))
-                  ) : filteredApplications.length > 0 ? (
-                    filteredApplications.map((app) => (
+                  ) : applications.length > 0 ? (
+                    applications.map((app) => (
                       <TableRow key={app.id}>
                         <TableCell>
                           <div className="font-medium">{app.name}</div>
@@ -253,19 +342,6 @@ export default function ApplicationsPage() {
                             {app.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {app.allowedUsers && app.allowedUsers.length > 0 ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                            >
-                              <Users className="mr-1 h-3 w-3" />
-                              {app.allowedUsers.length} user{app.allowedUsers.length !== 1 ? "s" : ""}
-                            </Badge>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">No users</span>
-                          )}
-                        </TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -281,10 +357,14 @@ export default function ApplicationsPage() {
                                   View details
                                 </Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem>Edit application</DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Link href={`/admin/applications/${app.id}/edit`} className="flex w-full">
+                                  Edit application
+                                </Link>
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => {
-                                  setSelectedApp(app.id)
+                                  setSelectedApp(app) // Pass the full app object
                                   setIsSecretDialogOpen(true)
                                 }}
                               >
@@ -299,7 +379,10 @@ export default function ApplicationsPage() {
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
-                                onClick={() => handleDeleteApplication(app.id)}
+                                onClick={() => {
+                                  setSelectedApp(app) // Pass the full app object
+                                  setIsDeleteDialogOpen(true)
+                                }}
                               >
                                 Delete application
                               </DropdownMenuItem>
@@ -319,16 +402,45 @@ export default function ApplicationsPage() {
               </Table>
             </div>
           </div>
+
+          {/* Pagination */}
+          {meta.totalPages > 1 && (
+            <div className="flex items-center justify-between space-x-2 py-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {(meta.page - 1) * meta.limit + 1} to {Math.min(meta.page * meta.limit, meta.total)} of{" "}
+                {meta.total} applications
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(meta.page - 1)}
+                  disabled={meta.page <= 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(meta.page + 1)}
+                  disabled={meta.page >= meta.totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
+      {/* Rotate Secret Dialog */}
       <Dialog open={isSecretDialogOpen} onOpenChange={setIsSecretDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rotate Client Secret</DialogTitle>
             <DialogDescription>
-              Are you sure you want to rotate the client secret? This will invalidate the current secret and generate a
-              new one.
+              Are you sure you want to rotate the client secret for &quot;{selectedApp?.name}&quot;? This will
+              invalidate the current secret and generate a new one.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -343,6 +455,32 @@ export default function ApplicationsPage() {
             </Button>
             <Button variant="destructive" onClick={handleRotateClientSecret}>
               Rotate Secret
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Application Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Application</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the application &quot;{selectedApp?.name}&quot;? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Deleting this application will permanently remove it and all associated data.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteApplication}>
+              Delete Application
             </Button>
           </DialogFooter>
         </DialogContent>

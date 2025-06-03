@@ -72,6 +72,9 @@ model Application {
   refreshTokenLifetime Int?     // in days
   
   // Relations
+  grantTypes            String[]
+  tokenSigningAlgorithm String?
+  corsOrigins           String[]
   users               UserApplication[]
 }
 

@@ -1,13 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, Check, Copy, ExternalLink, Eye, EyeOff, Loader2, Users } from "lucide-react"
 
-import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
-import { fetchApplications, type Application } from "@/lib/redux/slices/applicationsSlice"
-import { fetchUsers } from "@/lib/redux/slices/usersSlice"
 import { ApplicationLaunchButton } from "@/components/application-launch-button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -15,34 +12,102 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useToast } from "@/hooks/use-toast" // Assuming useToast is available
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { fetchWithAuth } from "@/lib/api"
+
+// Define types based on your API response
+type Application = {
+  id: string
+  name: string
+  type: "Web" | "Mobile" | "SPA" | "Service"
+  clientId: string
+  clientSecret?: string
+  redirectUris: string[]
+  status: "Active" | "Inactive" | "Development"
+  createdAt: string
+  description?: string
+  accessTokenLifetime?: number // in minutes
+  refreshTokenLifetime?: number // in days
+  grantTypes?: string[]
+  tokenSigningAlgorithm?: string
+  corsOrigins?: string[]
+}
+
+type User = {
+  id: string
+  name: string
+  email: string
+  status: string
+  roles: any[]
+  applications: any[]
+}
 
 export default function ApplicationDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const dispatch = useAppDispatch()
+  const { toast } = useToast()
 
   const applicationId = params.id as string
-  const { applications, loading } = useAppSelector((state) => state.applications)
-  const { users } = useAppSelector((state) => state.users)
 
   const [application, setApplication] = useState<Application | null>(null)
+  const [applicationUsers, setApplicationUsers] = useState<User[]>([]) // Users specifically for this app
+  const [loading, setLoading] = useState(true)
   const [showSecret, setShowSecret] = useState(false)
   const [copiedId, setCopiedId] = useState(false)
   const [copiedSecret, setCopiedSecret] = useState(false)
+  const [isSecretDialogOpen, setIsSecretDialogOpen] = useState(false) // For rotate secret dialog
 
-  useEffect(() => {
-    dispatch(fetchApplications())
-    dispatch(fetchUsers())
-  }, [dispatch])
+  const fetchApplicationDetails = useCallback(async () => {
+    setLoading(true)
+    try {
+      const appData: Application = await fetchWithAuth(`applications/${applicationId}`) // Updated call
+      setApplication(appData)
 
-  useEffect(() => {
-    if (applications.length > 0) {
-      const app = applications.find((a) => a.id === applicationId)
-      if (app) {
-        setApplication(app)
-      }
+      // Fetch users associated with this application
+      // Assuming an endpoint like applications/:id/users or filtering from all users
+      // For simplicity, let's assume the application object itself contains allowedUsers IDs
+      // and we fetch full user details separately if needed.
+      // Or, if the backend returns users directly with the application:
+      // const usersData = await fetchWithAuth(`applications/${applicationId}/users`);
+      // setApplicationUsers(usersData.items);
+
+      // For now, let's assume the application object has `allowedUsers` as an array of user IDs
+      // and we need to fetch user details for each. This is less efficient.
+      // A better API would return the full user objects directly or a dedicated endpoint.
+      // Given the previous `usersSlice` had `applications: string[]`, let's assume we need to fetch all users
+      // and filter them. This is what the previous Redux version did.
+      // Let's adapt to fetch all users and filter, similar to `users/page.tsx`'s `fetchWithAuth` pattern.
+
+      const allUsersResponse = await fetchWithAuth(`users?limit=1000`) // Updated call
+      const filteredUsers = allUsersResponse.items.filter((user: User) =>
+        user.applications.some((app: { id: string }) => app.id === applicationId),
+      )
+      setApplicationUsers(filteredUsers)
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to load application details.",
+        variant: "destructive",
+      })
+      setApplication(null) // Clear application on error
+    } finally {
+      setLoading(false)
     }
-  }, [applications, applicationId])
+  }, [applicationId, toast])
+
+  useEffect(() => {
+    if (applicationId) {
+      fetchApplicationDetails()
+    }
+  }, [applicationId, fetchApplicationDetails])
 
   const copyToClipboard = (text: string, isSecret = false) => {
     navigator.clipboard.writeText(text)
@@ -53,11 +118,34 @@ export default function ApplicationDetailsPage() {
       setCopiedId(true)
       setTimeout(() => setCopiedId(false), 2000)
     }
+    toast({
+      title: "Copied!",
+      description: isSecret ? "Client secret copied to clipboard." : "Client ID copied to clipboard.",
+      duration: 1500,
+    })
   }
 
-  const applicationUsers = users.filter((user) => user.applications.includes(applicationId))
+  const handleRotateClientSecret = async () => {
+    if (!application) return
 
-  if (loading === "pending" || !application) {
+    try {
+      await fetchWithAuth(`applications/${application.id}/rotate-secret`, "POST") // Updated call
+      toast({
+        title: "Success",
+        description: "Client secret has been rotated. Make sure to update your application with the new secret.",
+      })
+      setIsSecretDialogOpen(false)
+      fetchApplicationDetails() // Refresh to get the new secret
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to rotate client secret.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (loading || !application) {
     return (
       <div className="flex h-full w-full items-center justify-center p-8">
         <div className="flex flex-col items-center gap-2">
@@ -207,7 +295,7 @@ export default function ApplicationDetailsPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={() => setIsSecretDialogOpen(true)}>
               Rotate Client Secret
             </Button>
           </CardFooter>
@@ -319,6 +407,33 @@ export default function ApplicationDetailsPage() {
           </div>
         </CardFooter>
       </Card>
+
+      {/* Rotate Secret Dialog */}
+      <Dialog open={isSecretDialogOpen} onOpenChange={setIsSecretDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rotate Client Secret</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to rotate the client secret for &quot;{application?.name}&quot;? This will
+              invalidate the current secret and generate a new one.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              This action cannot be undone. Make sure to update your application with the new client secret immediately
+              after rotation.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSecretDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRotateClientSecret}>
+              Rotate Secret
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
