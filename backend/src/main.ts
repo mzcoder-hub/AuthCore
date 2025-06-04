@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { PrismaClient } from '@prisma/client';
+import { MetricsInterceptor } from './metrics/metrics.interceptor';
+import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -49,6 +51,8 @@ async function bootstrap() {
     },
     credentials: true,
   });
+
+  app.useGlobalInterceptors(new MetricsInterceptor(app.get(PrismaService)));
 
   // 📄 Swagger setup
   const config = new DocumentBuilder()

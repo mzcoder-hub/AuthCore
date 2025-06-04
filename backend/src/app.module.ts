@@ -7,6 +7,9 @@ import { ApplicationModule } from './applications/applications.module';
 import { UserModule } from './users/users.module';
 import { RoleModule } from './roles/roles.module';
 import { PermissionModule } from './permissions/permissions.module';
+import { MetricsModule } from './metrics/metrics.module';
+import { AnalyticsService } from './analytics/analytics.service';
+import { AnalyticsController } from './analytics/analytics.controller';
 
 @Module({
   imports: [
@@ -16,8 +19,9 @@ import { PermissionModule } from './permissions/permissions.module';
     PermissionModule,
     ApplicationModule,
     AuthModule,
+    MetricsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, AnalyticsController],
+  providers: [AppService, AnalyticsService],
 })
 export class AppModule {}

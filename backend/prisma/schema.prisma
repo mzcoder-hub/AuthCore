@@ -55,6 +55,18 @@ model User {
   AuthToken AuthToken[]
 }
 
+
+model ApiMetrics {
+  id        String   @id @default(cuid())
+  endpoint  String
+  method    String
+  status    Int
+  latencyMs Int
+  userId    String?
+  createdAt DateTime @default(now())
+}
+
+
 model Application {
   id                  String    @id @default(cuid())
   name                String
