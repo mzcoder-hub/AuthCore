@@ -262,6 +262,70 @@
           }
         }
       ]
-    }
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Total Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/analytics/users/total",
+              "host": ["{{base_url}}"],
+              "path": ["analytics", "users", "total"]
+            },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }
+            ]
+          }
+        },
+        {
+          "name": "Get Total Applications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/analytics/applications/total",
+              "host": ["{{base_url}}"],
+              "path": ["analytics", "applications", "total"]
+            },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }
+            ]
+          }
+        },
+        {
+          "name": "Get Requests Per Minute (Chart Data)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/analytics/requests/per-minute?period=60",
+              "host": ["{{base_url}}"],
+              "path": ["analytics", "requests", "per-minute"],
+              "query": [
+                { "key": "period", "value": "60", "description": "Minutes to aggregate, e.g. 60 = last 60 minutes" }
+              ]
+            },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }
+            ]
+          }
+        },
+        {
+          "name": "Get Users By Application",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/analytics/users/by-application",
+              "host": ["{{base_url}}"],
+              "path": ["analytics", "users", "by-application"]
+            },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }
+            ]
+          }
+        }
+      ]
+    }    
   ]
 }
