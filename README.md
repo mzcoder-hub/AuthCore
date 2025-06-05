@@ -3,6 +3,7 @@
 A modern, responsive admin dashboard and user interface for [AuthCore Backend](https://github.com/mzcoder-hub/AuthCore/tree/master/backend) - a centralized authentication system. Built with Next.js 15, TypeScript, and Tailwind CSS to provide a seamless management experience for your AuthCore authentication server.
 
 ![AuthCore System](dashboard.png)
+![AuthCore System](view.png)
 
 ## ✨ Features
 
