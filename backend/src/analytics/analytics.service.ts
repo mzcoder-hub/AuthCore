@@ -74,14 +74,17 @@ export class AnalyticsService {
       orderBy: { createdAt: 'desc' },
       take: limit,
       include: {
-        user: true, // get full user record (including email)
-        application: true, // get application record (including name)
+        user: true,
+        application: true,
       },
     });
 
     // Map to the shape you want for the frontend
     return logs.map((log) => ({
       event: log.event,
+      user: log.user ? log.user.email : null,
+      application: log.application ? log.application.name : null,
+      details: log.details || null,
       ipAddress: log.ipAddress,
       time: log.createdAt,
     }));
