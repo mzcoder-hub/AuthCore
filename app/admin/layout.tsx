@@ -141,7 +141,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <span>Analytics</span>
                 </Link>
 
-                <Link
+                {/* <Link
                   href="/admin/settings"
                   className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors w-full hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-accent-foreground))] ${
                     isActive("/admin/settings")
@@ -151,7 +151,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 >
                   <Settings className="h-4 w-4" />
                   <span>Settings</span>
-                </Link>
+                </Link> */}
               </SidebarMenu>
             </SidebarContent>
             <SidebarFooter className="border-t">
@@ -192,10 +192,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    {/* <DropdownMenuItem>
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
-                    </DropdownMenuItem>
+                    </DropdownMenuItem> */}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />

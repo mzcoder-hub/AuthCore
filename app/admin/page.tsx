@@ -11,6 +11,7 @@ import { SystemHealthChart } from "@/components/system-health-chart"
 import { useEffect, useState, useCallback } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Loader2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 import { fetchWithAuth } from "@/lib/api"
 
 type RequestsPerMinuteData = {
@@ -18,12 +19,27 @@ type RequestsPerMinuteData = {
   count: number
 }
 
+// Updated ActivityEvent type to match API response and include 'id' for React keys
+type ActivityEvent = {
+  id: string // Added for table key, generated from time and index
+  event: string
+  user: string
+  application: string
+  details: Record<string, any> // Added details field
+  ipAddress: string | null // Matches API response
+  time: string
+}
+
 export default function AdminDashboardPage() {
+  const { toast } = useToast()
   const [totalUsers, setTotalUsers] = useState<number | null>(null)
   const [totalApplications, setTotalApplications] = useState<number | null>(null)
   const [requestsPerMinute, setRequestsPerMinute] = useState<RequestsPerMinuteData[]>([])
+  const [recentActivity, setRecentActivity] = useState<ActivityEvent[]>([])
   const [loadingStats, setLoadingStats] = useState(true)
+  const [loadingActivity, setLoadingActivity] = useState(true)
   const [statsError, setStatsError] = useState<string | null>(null)
+  const [activityError, setActivityError] = useState<string | null>(null)
 
   const fetchDashboardStats = useCallback(async () => {
     setLoadingStats(true)
@@ -44,14 +60,45 @@ export default function AdminDashboardPage() {
     } catch (err) {
       setStatsError(err instanceof Error ? err.message : "Failed to fetch dashboard stats")
       console.error("Error fetching dashboard stats:", err)
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to load dashboard stats.",
+        variant: "destructive",
+      })
     } finally {
       setLoadingStats(false)
     }
-  }, [])
+  }, [toast])
+
+  const fetchRecentActivity = useCallback(async () => {
+    setLoadingActivity(true)
+    setActivityError(null)
+    try {
+      const activityData: ActivityEvent[] = await fetchWithAuth("analytics/activity")
+      // Assign a unique ID for table key and map ipAddress to ip for existing component
+      const formattedActivity = activityData.map((item, index) => ({
+        ...item,
+        id: `${item.time}-${index}-${item.event}`, // More robust unique ID for React keys
+        ip: item.ipAddress || "N/A", // Map ipAddress to ip for existing component
+      }))
+      setRecentActivity(formattedActivity)
+    } catch (err) {
+      setActivityError(err instanceof Error ? err.message : "Failed to fetch recent activity")
+      console.error("Error fetching recent activity:", err)
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to load recent activity.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingActivity(false)
+    }
+  }, [toast])
 
   useEffect(() => {
     fetchDashboardStats()
-  }, [fetchDashboardStats])
+    fetchRecentActivity()
+  }, [fetchDashboardStats, fetchRecentActivity])
 
   return (
     <div className="flex flex-col gap-6 pb-8">
@@ -177,6 +224,9 @@ export default function AdminDashboardPage() {
           <CardDescription>Latest authentication events and admin actions</CardDescription>
         </CardHeader>
         <CardContent className="px-0 sm:px-6">
+          {activityError && (
+            <div className="mb-4 rounded-md bg-destructive/15 p-3 text-sm text-destructive">Error: {activityError}</div>
+          )}
           <Tabs defaultValue="auth">
             <TabsList className="mx-4 sm:mx-0">
               <TabsTrigger value="auth">Authentication</TabsTrigger>
@@ -185,106 +235,43 @@ export default function AdminDashboardPage() {
             </TabsList>
             <TabsContent value="auth" className="mt-4">
               <div className="overflow-auto">
-                <RecentActivityTable
-                  data={[
-                    {
-                      id: "1",
-                      event: "Login Success",
-                      user: "john.doe@example.com",
-                      application: "Customer Portal",
-                      ip: "192.168.1.1",
-                      time: "2023-05-09T14:30:00",
-                    },
-                    {
-                      id: "2",
-                      event: "Token Refresh",
-                      user: "jane.smith@example.com",
-                      application: "Admin Dashboard",
-                      ip: "192.168.1.2",
-                      time: "2023-05-09T14:25:00",
-                    },
-                    {
-                      id: "3",
-                      event: "Login Success",
-                      user: "robert.johnson@example.com",
-                      application: "Mobile App",
-                      ip: "192.168.1.3",
-                      time: "2023-05-09T14:20:00",
-                    },
-                    {
-                      id: "4",
-                      event: "Logout",
-                      user: "emily.davis@example.com",
-                      application: "Customer Portal",
-                      ip: "192.168.1.4",
-                      time: "2023-05-09T14:15:00",
-                    },
-                    {
-                      id: "5",
-                      event: "Password Changed",
-                      user: "michael.wilson@example.com",
-                      application: "Financial Dashboard",
-                      ip: "192.168.1.5",
-                      time: "2023-05-09T14:10:00",
-                    },
-                  ]}
-                />
+                {loadingActivity ? (
+                  <div className="flex h-48 items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <RecentActivityTable
+                    data={recentActivity.filter(
+                      (activity) => activity.event === "login" || activity.event === "logout",
+                    )}
+                  />
+                )}
               </div>
             </TabsContent>
             <TabsContent value="admin" className="mt-4">
               <div className="overflow-auto">
-                <RecentActivityTable
-                  data={[
-                    {
-                      id: "1",
-                      event: "User Created",
-                      user: "admin@example.com",
-                      application: "Admin Console",
-                      ip: "192.168.1.1",
-                      time: "2023-05-09T13:30:00",
-                    },
-                    {
-                      id: "2",
-                      event: "Role Modified",
-                      user: "admin@example.com",
-                      application: "Admin Console",
-                      ip: "192.168.1.1",
-                      time: "2023-05-09T13:25:00",
-                    },
-                    {
-                      id: "3",
-                      event: "Application Created",
-                      user: "admin@example.com",
-                      application: "Admin Console",
-                      ip: "192.168.1.1",
-                      time: "2023-05-09T12:20:00",
-                    },
-                  ]}
-                />
+                {loadingActivity ? (
+                  <div className="flex h-48 items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <RecentActivityTable data={recentActivity.filter((activity) => activity.event === "admin_action")} />
+                )}
               </div>
             </TabsContent>
             <TabsContent value="errors" className="mt-4">
               <div className="overflow-auto">
-                <RecentActivityTable
-                  data={[
-                    {
-                      id: "1",
-                      event: "Login Failed",
-                      user: "unknown@example.com",
-                      application: "Customer Portal",
-                      ip: "192.168.1.100",
-                      time: "2023-05-09T11:30:00",
-                    },
-                    {
-                      id: "2",
-                      event: "Invalid Token",
-                      user: "jane.smith@example.com",
-                      application: "Mobile App",
-                      ip: "192.168.1.2",
-                      time: "2023-05-09T10:25:00",
-                    },
-                  ]}
-                />
+                {loadingActivity ? (
+                  <div className="flex h-48 items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <RecentActivityTable
+                    data={recentActivity.filter(
+                      (activity) => activity.event.includes("fail") || activity.event.includes("error"),
+                    )}
+                  />
+                )}
               </div>
             </TabsContent>
           </Tabs>
