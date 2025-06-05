@@ -57,4 +57,29 @@ export class AnalyticsService {
       totalUsers: app.users.length,
     }));
   }
+
+  async getRecentActivity(type?: string, limit: number = 20) {
+    const where: any = {};
+    if (type === 'auth') {
+      where.event = {
+        in: ['login', 'logout', 'token_refresh', 'password_changed'],
+      };
+    } else if (type === 'admin') {
+      where.event = { in: ['admin_action'] };
+    } else if (type === 'error') {
+      where.event = { in: ['error', 'login_failed'] };
+    }
+    const logs = await this.prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    // Map to the shape you want for the frontend
+    return logs.map((log) => ({
+      event: log.event,
+      ipAddress: log.ipAddress,
+      time: log.createdAt,
+    }));
+  }
 }

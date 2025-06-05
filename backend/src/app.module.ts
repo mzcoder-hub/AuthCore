@@ -10,6 +10,8 @@ import { PermissionModule } from './permissions/permissions.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { AnalyticsService } from './analytics/analytics.service';
 import { AnalyticsController } from './analytics/analytics.controller';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { AdminAuditInterceptor } from './auth/admin.interceptor';
 
 @Module({
   imports: [
@@ -22,6 +24,13 @@ import { AnalyticsController } from './analytics/analytics.controller';
     MetricsModule,
   ],
   controllers: [AppController, AnalyticsController],
-  providers: [AppService, AnalyticsService],
+  providers: [
+    AppService,
+    AnalyticsService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AdminAuditInterceptor,
+    },
+  ],
 })
 export class AppModule {}

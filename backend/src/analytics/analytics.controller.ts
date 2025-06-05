@@ -10,6 +10,16 @@ export class AnalyticsController {
     return { total: await this.analyticsService.totalUsers() };
   }
 
+  // analytics.controller.ts or auditlog.controller.ts
+
+  @Get('activity')
+  async getRecentActivity(
+    @Query('type') type?: string, // e.g., 'auth', 'admin', 'error'
+    @Query('limit') limit: number = 20, // or any default
+  ) {
+    return await this.analyticsService.getRecentActivity(type, limit);
+  }
+
   @Get('applications/total')
   async getTotalApplications() {
     return { total: await this.analyticsService.totalApplications() };
