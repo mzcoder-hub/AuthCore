@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { ArrowUpRight, Key, Shield, Users } from "lucide-react"
 
@@ -6,14 +8,61 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RecentActivityTable } from "@/components/recent-activity-table"
 import { SystemHealthChart } from "@/components/system-health-chart"
+import { useEffect, useState, useCallback } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Loader2 } from "lucide-react"
+import { fetchWithAuth } from "@/lib/api"
+
+type RequestsPerMinuteData = {
+  minute: string
+  count: number
+}
 
 export default function AdminDashboardPage() {
+  const [totalUsers, setTotalUsers] = useState<number | null>(null)
+  const [totalApplications, setTotalApplications] = useState<number | null>(null)
+  const [requestsPerMinute, setRequestsPerMinute] = useState<RequestsPerMinuteData[]>([])
+  const [loadingStats, setLoadingStats] = useState(true)
+  const [statsError, setStatsError] = useState<string | null>(null)
+
+  const fetchDashboardStats = useCallback(async () => {
+    setLoadingStats(true)
+    setStatsError(null)
+    try {
+      const usersTotal: { total: number } = await fetchWithAuth("analytics/users/total")
+      setTotalUsers(usersTotal.total)
+
+      const appsTotal: { total: number } = await fetchWithAuth("analytics/applications/total")
+      setTotalApplications(appsTotal.total)
+
+      const requestsData: RequestsPerMinuteData[] = await fetchWithAuth("analytics/requests/per-minute?period=120")
+      const formattedRequests = requestsData.map((item) => ({
+        ...item,
+        name: new Date(item.minute).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      }))
+      setRequestsPerMinute(formattedRequests)
+    } catch (err) {
+      setStatsError(err instanceof Error ? err.message : "Failed to fetch dashboard stats")
+      console.error("Error fetching dashboard stats:", err)
+    } finally {
+      setLoadingStats(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchDashboardStats()
+  }, [fetchDashboardStats])
+
   return (
     <div className="flex flex-col gap-6 pb-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground mt-2">Overview of your authentication system</p>
       </div>
+
+      {statsError && (
+        <div className="mb-4 rounded-md bg-destructive/15 p-3 text-sm text-destructive">Error: {statsError}</div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -22,7 +71,11 @@ export default function AdminDashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2,853</div>
+            {loadingStats ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <div className="text-2xl font-bold">{totalUsers !== null ? totalUsers.toLocaleString() : "N/A"}</div>
+            )}
             <p className="text-xs text-muted-foreground">+12% from last month</p>
           </CardContent>
         </Card>
@@ -42,7 +95,13 @@ export default function AdminDashboardPage() {
             <Key className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
+            {loadingStats ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <div className="text-2xl font-bold">
+                {totalApplications !== null ? totalApplications.toLocaleString() : "N/A"}
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">+2 new this month</p>
           </CardContent>
         </Card>
@@ -65,7 +124,17 @@ export default function AdminDashboardPage() {
             <CardDescription>Authentication requests and system performance</CardDescription>
           </CardHeader>
           <CardContent>
-            <SystemHealthChart />
+            {loadingStats ? (
+              <div className="flex h-[300px] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : requestsPerMinute.length > 0 ? (
+              <SystemHealthChart data={requestsPerMinute} />
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                No system health data available.
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card className="lg:col-span-3">
