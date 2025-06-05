@@ -53,6 +53,8 @@ model User {
   applications        UserApplication[]
 
   AuthToken AuthToken[]
+
+  AuditLog AuditLog[]
 }
 
 
@@ -88,6 +90,8 @@ model Application {
   tokenSigningAlgorithm String?
   corsOrigins           String[]
   users               UserApplication[]
+
+  AuditLog AuditLog[]
 }
 
 // Join table for many-to-many relationship between User and Application
@@ -109,7 +113,9 @@ model AuditLog {
   id            String   @id @default(cuid())
   event         String
   userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
   applicationId String?
+  application   Application? @relation(fields: [applicationId], references: [id])
   ipAddress     String?
   userAgent     String?
   details       Json?

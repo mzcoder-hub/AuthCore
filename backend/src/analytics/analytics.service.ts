@@ -73,6 +73,10 @@ export class AnalyticsService {
       where,
       orderBy: { createdAt: 'desc' },
       take: limit,
+      include: {
+        user: true, // get full user record (including email)
+        application: true, // get application record (including name)
+      },
     });
 
     // Map to the shape you want for the frontend
