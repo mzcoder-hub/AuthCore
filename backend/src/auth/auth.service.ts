@@ -46,6 +46,25 @@ export class AuthService {
 
     if (!app) throw new UnauthorizedException('Invalid application');
 
+    const isAssigned =
+      user.applications &&
+      user.applications.some((ua) => ua.applicationId === app.id);
+
+    if (!isAssigned) {
+      // Optional: log this event as well
+      await this.prisma.auditLog.create({
+        data: {
+          event: 'login_denied',
+          userId: user.id,
+          applicationId: app.id,
+          details: { method: 'password', reason: 'not assigned to app' },
+        },
+      });
+      throw new UnauthorizedException(
+        `${app.name} is not available for you. Please contact your administrator.`,
+      );
+    }
+
     // 👉 Update lastLogin for the user
     await this.prisma.user.update({
       where: { id: user.id },
@@ -91,7 +110,7 @@ export class AuthService {
 
     await this.prisma.auditLog.create({
       data: {
-        event: 'login',
+        event: dto.state ? 'login_success_with_state' : 'login_success',
         userId: user.id,
         applicationId: app.id,
         details: { method: 'password', success: true },

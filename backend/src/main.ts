@@ -10,25 +10,18 @@ async function bootstrap() {
 
   const prisma = new PrismaClient();
 
-  // 🔁 In-memory CORS cache
-  let corsCache: string[] = [];
-  let lastFetched = 0;
-  const TTL = 5 * 60 * 1000; // 5 minutes
-
-  async function getAllowedOrigins(): Promise<string[]> {
-    const now = Date.now();
-    if (now - lastFetched < TTL && corsCache.length > 0) {
-      return corsCache;
+  async function getAllowedOrigins(origin: string): Promise<string[]> {
+    const app = await prisma.application.findFirst({
+      where: {
+        corsOrigins: { has: origin }, // or: redirectUris: { has: origin }
+      },
+    });
+    if (!app) {
+      console.log('No application found for origin:', origin);
+      return [];
     }
 
-    const apps = await prisma.application.findMany();
-    corsCache = apps
-      .flatMap((a) => a.applicationUrls || [])
-      .map((url) => url.toLowerCase().trim())
-      .filter((url, i, arr) => !!url && arr.indexOf(url) === i);
-
-    lastFetched = now;
-    return corsCache;
+    return app.corsOrigins || []; // or: app.redirectUris || [];
   }
 
   // 🔐 Dynamic CORS middleware
@@ -37,8 +30,7 @@ async function bootstrap() {
       try {
         if (!origin) return callback(null, true);
 
-        const allowedOrigins = await getAllowedOrigins();
-        // console.log('Allowed Origins:', allowedOrigins);
+        const allowedOrigins = await getAllowedOrigins(origin);
 
         if (allowedOrigins.includes(origin.toLowerCase())) {
           return callback(null, true);
