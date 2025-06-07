@@ -60,10 +60,14 @@ export async function login({
       email,
       password,
       client_id,
-      redirect_uri,
+      redirectUri : redirect_uri,
       state,
     }),
   })
+
+  console.log(res)
+
+  console.log("Login response status:", res.status)
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))

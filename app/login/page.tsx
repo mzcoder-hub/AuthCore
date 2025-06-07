@@ -23,52 +23,57 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
 
-  const redirectTo = searchParams.get("redirect_to") || "/admin"
+  const redirectTo = searchParams.get("redirect_uri") || "/admin"
   const applicationName = searchParams.get("app_name") || null
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
     setIsLoading(true)
-
+  
     try {
-      const client_id = process.env.NEXT_PUBLIC_AUTHCORE_CLIENT_ID || "your-client-id"
-      const baseUrl = window.location.origin // http://localhost:3001 or deployed domain
 
-      const redirectUri = new URL("/auth/callback", baseUrl)
-      redirectUri.searchParams.set("redirect_uri", redirectTo)
-      if (applicationName) {
-        redirectUri.searchParams.set("app_name", applicationName)
+      let client_id = ""
+      if(searchParams.get("client_id") === null) {
+        client_id = ""
+      }else{
+        client_id = searchParams.get("client_id") || ""
       }
-
+      // Get these from query params, not hardcoded!
+      // If your page is at /login?redirect_uri=http://localhost:4000/auth/callback&app_name=MyApp
+      // Then redirectTo and applicationName will be correct
+      // Otherwise, provide a fallback
+  
+      // redirectTo should be the real client callback url (eg. http://localhost:4000/auth/callback)
+      // applicationName should be whatever is in the params
+  
       const response = await login({
         email,
         password,
         client_id,
-        redirect_uri: redirectUri.toString(),
-        state: applicationName ?? "AuthCore",
+        redirect_uri: redirectTo, // <-- The ACTUAL redirect target from the client
+        state: searchParams.get("state") || undefined, // Optional state param
       })
-
+  
       setIsRedirecting(true)
-
+  
       setTimeout(() => {
         if (response.accessToken) {
-          // Save tokens for session management
-          localStorage.setItem("accessToken", response.accessToken);
-          if (response.refreshToken) localStorage.setItem("refreshToken", response.refreshToken);
-      
-          router.push(redirectTo);
+          localStorage.setItem("accessToken", response.accessToken)
+          if (response.refreshToken) localStorage.setItem("refreshToken", response.refreshToken)
+          // Redirect to the target callback (or whatever client expects)
+          window.location.href = response.redirectTo || redirectTo
         } else {
-          setError("Login failed: No access token received");
+          setError("Login failed: No access token received")
         }
       }, 1500)
-      
     } catch (err: any) {
       setError(err.message || "Login failed")
     } finally {
       setIsLoading(false)
     }
   }
+  
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted p-4">
