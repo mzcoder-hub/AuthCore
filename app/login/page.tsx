@@ -23,7 +23,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
 
-  const redirectTo = searchParams.get("redirect_uri") || "/admin"
+  let redirectTo = searchParams.get("redirect_uri") || "/admin"
   const applicationName = searchParams.get("app_name") || null
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -32,20 +32,16 @@ export default function LoginPage() {
     setIsLoading(true)
   
     try {
-
-      let client_id = ""
+      let client_id = null
       if(searchParams.get("client_id") === null) {
-        client_id = ""
+        client_id = process.env.NEXT_PUBLIC_AUTHCORE_CLIENT_ID
       }else{
         client_id = searchParams.get("client_id") || ""
       }
-      // Get these from query params, not hardcoded!
-      // If your page is at /login?redirect_uri=http://localhost:4000/auth/callback&app_name=MyApp
-      // Then redirectTo and applicationName will be correct
-      // Otherwise, provide a fallback
-  
-      // redirectTo should be the real client callback url (eg. http://localhost:4000/auth/callback)
-      // applicationName should be whatever is in the params
+
+      if(redirectTo === null || redirectTo === "") {
+        redirectTo = "/admin" // Fallback if no redirect_uri provided
+      }
   
       const response = await login({
         email,
