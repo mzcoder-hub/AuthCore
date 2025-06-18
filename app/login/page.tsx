@@ -42,7 +42,9 @@ export default function LoginPage() {
       if(redirectTo === null || redirectTo === "") {
         redirectTo = "/admin" // Fallback if no redirect_uri provided
       }
-  
+      
+      console.log(redirectTo, client_id)
+      
       const response = await login({
         email,
         password,
@@ -50,6 +52,8 @@ export default function LoginPage() {
         redirect_uri: redirectTo, // <-- The ACTUAL redirect target from the client
         state: searchParams.get("state") || undefined, // Optional state param
       })
+
+      console.log(response)
   
       setIsRedirecting(true)
   
